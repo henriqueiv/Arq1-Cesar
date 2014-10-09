@@ -11,6 +11,8 @@ ORG 20000 ; area de variaveis
 	msgResumo1: DAB 'Engenheiros: ',0
 	msgResumo2: DAB 'Cidades: ',0
 	iEng: DW 0
+	maiorLucro: DW 0 ; valor do maior lucro
+	iEngMaiorLucro: DW 0 ; indice do engenheiro que tem o maior lucro
 
 ORG 30000 ; valor definido para facilitar debug
 	listaLucrosEng: DAW 99 ; esta lista armazenara os dados pre calculados dos engenheiros mantendo a mesma ordenacao da lista principal
@@ -384,7 +386,6 @@ _S_CALCULA:
 				BR loopVisitas
 
 				salvaTotal:
-					HLT ; DEBUG
 					; implementa pra ja verificar maior e menor e salvar
 					MOV R5, -(R6) ; salva R5 na pilha
 					MOV R4, -(R6) ; salva R4 na pilha
@@ -398,15 +399,9 @@ _S_CALCULA:
 					ADD R4, R4 ; transforma em palavras
 					ADD #listaLucrosEng, R4 ; soma com o endereco inicial da lista de lucros
 
-					CMP #32767, R3 ; 32767 - R3. se der positivo R3 eh positivo, se der negativo R3 eh negativo
-						BGE salvaTotalSalva ; Se for positivo salva direto
-
-					; se for negativo converte antes de salvar
-					NOT R3
-					ADD R5, R3 ; O R5 contem 1
-
 					salvaTotalSalva:
 						MOV R3, (R4) ; salva o valor na posicao calculada
+						; JSR R7, _S_VERIFICA_MAIOR_LUCRO ; em R3 estara o valor atualmente calculado
 						CLR R3 ; zera registrador para calcular o proximo eng
 
 					MOV (R6)+, R4 ; restaura R4
@@ -414,8 +409,34 @@ _S_CALCULA:
 					;MOV R3, (R2)
 					BR continua
 
+;> R3 = valor a ser verificado
+;> Se R3 > maiorLucro
+;>     (maiorLucro) = R3
+;>
+;> Nenhum registrador eh alterado
+;>
+iEngMaiorLucro
+_S_VERIFICA_MAIOR_LUCRO:
+	CMP maiorLucro, R3 ; se der positivo R3 eh positivo, se der negativo R3 eh negativo
+		BLE maior ; Se for positivo salva direto
+	RTS R7
 
-_S_SALVA_TOTAL:
+	maiorLucro:
+		MOV R3, maiorLucro
+		RTS R7
+
+
+_S_VERIFICA_NEGATIVO:
+	HLT ; DEBUG
+	CMP #32767, R3 ; se der positivo R3 eh positivo, se der negativo R3 eh negativo
+		BLE positivo ; Se for positivo salva direto
+
+	; negativo 
+	; se for negativo converte antes de salvar
+	NOT R3 ; R3 contem o valor
+	ADD R5, R3 ; R5 contem 1
+
+
 
 
 ;> Esta funcao apenas visitara' uma estrutura auxiliar criada no inicio do programa que contem os dados ja calculados
