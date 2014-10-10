@@ -26,10 +26,10 @@ ORG 30000 ; valor definido para facilitar debug
 	listaLucrosEng: DAW 99 ; esta lista armazenara os dados pre calculados dos engenheiros mantendo a mesma ordenacao da lista principal
 
 ORG 32768
-;	ne: DW 99;
-;	endListaEng: DW 0;
-;	nc: DW 999;
-;	endListaLucro: DW 0;
+	ne: DW 99;
+	endListaEng: DW 0;
+	nc: DW 999;
+	endListaLucro: DW 0;
 
 ORG 0
 	MOV #32767, R6 ; aponta SP para 32767 conforme especificacao do trabalho
