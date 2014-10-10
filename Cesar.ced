@@ -1,3 +1,63 @@
+;=====================================================
+; Caso de teste #1
+;=====================================================
+org 32768
+ne:	dw 11 ; numero de engenheiros. 32768
+
+;pe: dw engenheiros ; 32770
+endListaEng: dw engenheiros
+
+nc: dw 10 ; n˙mero de cidades ; 32772
+;pl: dw lucros ; 32774
+endListaLucro: dw lucros
+
+engenheiros: 
+	dw eng0  ; 32776
+	dw eng1  ; 32778
+	dw eng2  ; 32780
+	dw eng3  ; 32782
+	dw eng4    ; 32784
+	dw eng5    ; 32786
+	dw eng6    ; 32790
+	dw eng7    ; 32792
+	dw eng8    ; 32794
+	dw eng9    ; 32796
+	dw eng10   ; 32798
+
+lucros: daw 500,-100,350,-50,1200,950,800,-200,100,1000 ; 32794
+32796, 32798, 32800, 32802, 32804, 32806, 32808 
+
+eng7:  daw 3,1,3,7 ; 32810
+eng6:  daw 1,4 ; 32812
+eng5:  daw 0 ; 32814
+eng8:  daw 7,0,2,4,5,6,8,9 ; 32816
+eng0:  daw 4,0,1,2,3 ; 32818
+eng1:  daw 5,4,5,6,7,8 ; 32820
+eng2:  daw 3,9,5,1 ; 32822
+eng3:  daw 5,0,2,4,6,8 ; 32824
+eng4:  daw 10,0,1,2,3,4,5,6,7,8,9 ; 32826
+eng9:  daw 2,1,8 ; 32828
+eng10: daw 3,1,2,7 ; 32830
+
+; resultados
+;   eng0: 700
+;   eng1: 2850
+;   eng2: 1850
+;   eng3: 2950
+;   eng4: 4550
+;   eng5: 0
+;   eng6: 1200
+;   eng7: -350
+;   eng8: 4900
+;   eng9: 0
+;   eng10: 50
+;
+
+org 65500
+	dab 'Teste #1 carregado'
+;=====================================================
+
+
 ;> Inicializacao do apontador da pilha
 ;> para que a pilha fique acima da area
 ;> de memoria mapeada para entrada e saida
@@ -10,18 +70,31 @@ ORG 20000 ; area de variaveis
 	msgErroAcaoInvalida: DAB 'Acao invalida', 0 	   ; 0 para encerrar a string
 	msgResumo1: DAB 'Engenheiros: ',0
 	msgResumo2: DAB 'Cidades: ',0
+	msgEng: DAB 'Engenheiro ',0
+	msgSelEng: DAB 'Engenheiro: ',0
+	msgMaiorLucro: DAB 'Maior lucro: R$ ',0
+	msgMaiorLucro1: DAB ',00 do eng: ',0
+	msgSemLucroPrejuizo: DAB ', sem lucro ou prejuizo', 0
+	msgLucro: DAB ', lucro R$ ', 0
+	msgPrejuizo: DAB ', prejuizo R$ ', 0
+	msgCentavos: DAB ',00',0
+	
+
+ORG 23000
 	iEng: DW 0
+
+ORG 25000
 	maiorLucro: DW 0 ; valor do maior lucro
 	iEngMaiorLucro: DW 0 ; indice do engenheiro que tem o maior lucro
 
 ORG 30000 ; valor definido para facilitar debug
 	listaLucrosEng: DAW 99 ; esta lista armazenara os dados pre calculados dos engenheiros mantendo a mesma ordenacao da lista principal
 
-ORG 32768
-	ne: DW 99;
-	endListaEng: DW 0;
-	nc: DW 999;
-	endListaLucro: DW 0;
+;ORG 32768
+;	ne: DW 99;
+;	endListaEng: DW 0;
+;	nc: DW 999;
+;	endListaLucro: DW 0;
 
 ORG 0
 	MOV #32767, R6 ; aponta SP para 32767 conforme especificacao do trabalho
@@ -36,7 +109,7 @@ ORG 0
 	JSR R7, _S_RESUMO ; aguarda tecla
 	JSR R7, _S_MENU
 	
-	HLT
+	JSR R7, _S_ENCERRAR_HENRIQUE
 
 _S_RESUMO:
 	JSR R7, _S_LIMPA_VISOR_ULTRA
@@ -81,6 +154,74 @@ _S_RESUMO:
 
 	RTS R7
 
+
+;>
+;> MOV #0, R5 ; indice do dispostivo de i/o
+;> MOV valor, R1 ; valor a ser exibido no visor
+;> JSR R7, _S_EXIBE_REL_ENG
+;>
+_S_EXIBE_REL_ENG:
+	MOV R0,-(R6)
+	MOV R1,-(R6)
+	MOV R2,-(R6)
+	MOV R5,-(R6)
+
+	ADD #65500, R5 ; converte indice pra posicao de i/o
+	ADD #4, R5 ; como o lucro pode ir ate 99999 eh somado n-1, onde n eh o numero de digitos a ser escrito considerando que os dados sao preenchidos de tras pra frente
+	; Ex.: lucro: 9999
+	; R5 = 13 ; posicao inicial que eh o digito 1, entao R5 sera posicionado na posicao do digito 3
+
+	CLR R0 			; 16 bits mais significativos do dividendo
+	MOV #10,R2 		; divisor (16 bits)
+	JSR R7,_S_DIVIDIR ; dividir por 10
+
+	ADD #48, R1 ; converter resto para ASCII
+	MOV R1, (R5) ; mover unidade para LED 0 no visor
+
+	;dividir quociente anterior por 10
+	MOV R0, R1 ; zera R1
+	CLR R0
+	JSR R7,_S_DIVIDIR
+
+	ADD #48, R1
+	DEC R5 ; volta uma posicao no visor
+	MOV R1, (R5)
+
+	;dividir quociente anterior por 10
+	MOV R0, R1
+	CLR R0
+	JSR R7,_S_DIVIDIR
+
+	ADD #48, R1
+	DEC R5 ; volta uma posicao no visor
+	MOV R1, (R5)
+
+	;dividir quociente anterior por 10
+	MOV R0, R1
+	CLR R0
+	JSR R7,_S_DIVIDIR
+
+	ADD #48, R1
+	DEC R5 ; volta uma posicao no visor
+	MOV R1, (R5)
+
+	;dividir quociente anterior por 10
+	MOV R0, R1
+	CLR R0
+	JSR R7,_S_DIVIDIR
+
+	ADD #48, R1
+	DEC R5 ; volta uma posicao no visor
+	MOV R1, (R5)
+
+	fim:
+		MOV (R6)+, R5 ; restaura R2
+		MOV (R6)+, R2 ; restaura R2
+		MOV (R6)+, R1 ; restaura R1
+		MOV (R6)+, R0 ; restaura R0
+
+	RTS R7
+
 ;>
 ;> MOV #0, R5 ; indice do dispostivo de i/o
 ;> MOV valor,R1 ; valor a ser exibido no visor
@@ -119,7 +260,6 @@ _S_EXIBE_ENG:
 	MOV (R6)+, R0 ; restaura R0
 
 	RTS R7
-
 
 ;>
 ;> MOV #0, R5 ; indice do dispostivo de i/o
@@ -162,22 +302,24 @@ _S_EXIBE_CIDADE:
 	DEC R5 ; volta uma posicao no visor
 	MOV R1, (R5)
 
-	MOV (R6)+, R5 ; restaura R2
-	MOV (R6)+, R2 ; restaura R2
-	MOV (R6)+, R1 ; restaura R1
-	MOV (R6)+, R0 ; restaura R0
+	fimExibeCidade:
+		MOV (R6)+, R5 ; restaura R2
+		MOV (R6)+, R2 ; restaura R2
+		MOV (R6)+, R1 ; restaura R1
+		MOV (R6)+, R0 ; restaura R0
 
 	RTS R7
 
 
 _S_MENU:
+	JSR R7, _S_LIMPA_VISOR_ULTRA
 	MOV #msgMenu,R0
 	MOV #0, R1
 	JSR R7, _S_ESCREVER_NO_VISOR ; Escreve mensagem de apresentacao
 	
 	JSR R7, _S_AGUARDA_OPCAO_MENU
 
-	HLT
+	RTS R7
 
 _S_AGUARDA_OPCAO_MENU:
 	opcaoMenuSalvaRegistradores:
@@ -186,43 +328,95 @@ _S_AGUARDA_OPCAO_MENU:
 	opcaoMenuSalvaInicio:
 		MOV #65498,R0	; ponteiro para controle do teclado
 	opcaoMenuSalvaLimpa:
-		CLR (R0)		; libera buffer do teclado
+		CLR (R0)		; libera estado do teclado
+		CLR 65499 ; limpa buffer
 	opcaoMenuSalvaTesta:
 		TST (R0)		; testa se foi digitado algo
 		BEQ opcaoMenuSalvaTesta	; se nao foi, continua testando
 
-		CMP 65499, #'r'	; testa se recebeu caractere R
+		CMP 65499, #'r'	; testa se recebeu caractere r
 			BEQ resumo 	; se sim, vai pro resumo
 
-		CMP 65499, #'g'	; testa se recebeu caractere G
+		CMP 65499, #'R'	; testa se recebeu caractere R
+			BEQ resumo 	; se sim, vai pro resumo
+
+		CMP 65499, #'g'	; testa se recebeu caractere g
 			BEQ geral 	; se sim, vai pro relatorio geral
 
-		CMP 65499, #'f'	; testa se recebeu caractere F
-			BEQ fim 	; se sim, vai terminar execucao
+		CMP 65499, #'G'	; testa se recebeu caractere G
+			BEQ geral 	; se sim, vai pro relatorio geral
 
-		CMP 65499, #'e'	; testa se recebeu caractere E
+		CMP 65499, #'f'	; testa se recebeu caractere f
+			BEQ fimAguarda 	; se sim, vai terminar execucao
+
+		CMP 65499, #'F'	; testa se recebeu caractere F
+			BEQ fimAguarda 	; se sim, vai terminar execucao
+
+		CMP 65499, #'e'	; testa se recebeu caractere e
 			BEQ eng 	; se sim, vai pra selecao de engenheiros
 
-		BR opcaoMenuSalvaLimpa ; nenhuma tecla valida volta a esperar por caractere. Esta funcao nao volta ao inicio pois os registradores R1 e R3 nao sao alterados durante sua execucao
+		CMP 65499, #'E'	; testa se recebeu caractere E
+			BEQ eng 	; se sim, vai pra selecao de engenheiros
+
+		BR opcaoMenuSalvaTesta ; nenhuma tecla valida volta a esperar por caractere. Esta funcao nao volta ao inicio pois os registradores R1 e R3 nao sao alterados durante sua execucao
 
 	geral:
-		;JSR R7, _S_MENU_REL_GERAL
-		BR opcaoMenuSalvaLimpa
+		JSR R7, _S_MENU_REL_GERAL
+		BR opcaoMenuSalvaTesta
 
 	resumo:
 		JSR R7, _S_RESUMO ; 
+		BR opcaoMenuSalvaTesta
 
-	fim:
+	fimAguarda:
 		JSR R7, _S_ENCERRAR_HENRIQUE
 
 	eng:
 		JSR R7, _S_SELECAO_ENG
+		BR opcaoMenuSalvaTesta
 	
 	opcaoMenuRestauraRegistradores:
 		MOV (R6)+,R0	; restaura R0
 
 	opcaoMenuRetorna:
 		RTS R7
+
+_S_MENU_REL_GERAL:
+	; HLT ; debug
+	JSR R7, _S_LIMPA_VISOR_ULTRA
+
+	MOV #msgMaiorLucro, R0 
+	MOV #0, R1
+	JSR R7, _S_ESCREVER_NO_VISOR
+
+	MOV #20, R5 ; move indice desejado pra R5
+	MOV maiorLucro, R3 ; move valor que deseja imprimir
+	JSR R7, _S_PRINT_NUMEROS
+
+	MOV #msgMaiorLucro1, R0 
+	MOV #21, R1
+	JSR R7, _S_ESCREVER_NO_VISOR
+
+	MOV #34, R5 ; move indice desejado pra R5
+	MOV iEngMaiorLucro, R3 ; move valor que deseja imprimir
+	JSR R7, _S_PRINT_NUMEROS
+
+	relGeralSalvaInicio:
+		MOV #65498,R0	; ponteiro para controle do teclado
+	relGeralSalvaLimpa:
+		CLR (R0)		; libera estado do teclado
+		CLR 65499 ; limpa buffer
+	relGeralSalvaTesta:
+		TST (R0)		; testa se foi digitado algo
+		BEQ relGeralSalvaTesta	; se nao foi, continua testando
+
+		CMP 65499, #13
+			BEQ voltaMenu
+
+		BR relGeralSalvaTesta
+
+		voltaMenu:
+			JMP _S_MENU ; Se for enter volta pro menu
 
 
 _S_SELECAO_ENG:
@@ -234,14 +428,18 @@ _S_SELECAO_ENG:
 		MOV R4, -(R6) ; R4 sera o i
 		MOV R5, -(R6) ; R5 sera o ponteiro do teclado
 
+		MOV #msgSelEng, R0 
+		MOV #0, R1
+		JSR R7, _S_ESCREVER_NO_VISOR
+
 	selecaoEngInicio:
 		MOV #65498, R0	; ponteiro para controle do teclado
-		MOV #65500, R5	; ponteiro do teclado
+		MOV #65512, R5	; ponteiro do teclado
 		MOV #'_', (R5)	; preenche com underscore
 	selecaoEngLimpa:
 		MOV #48, R4 ; inicializa R4 com '0'
-		CLR (R0)		; limpa status do teclado
 		CLR 65499		; limpa buffer do teclado
+		CLR (R0)		; limpa status do teclado
 	selecaoEngTesta:
 		TST (R0)		; testa se foi digitado algo
 		BEQ selecaoEngTesta	; se nao foi, continua testando
@@ -259,21 +457,22 @@ _S_SELECAO_ENG:
 	    	INC R4
 
 	    	CMP #58, R4
-	    		BEQ selecaoEngLimpa ; se chegou ao fim e nao encontrou volta a aguardar tecla
+	    		BEQ selecaoEngTesta ; se chegou ao fim e nao encontrou volta a aguardar tecla
 
 	    	BR validaDigito ; se nao chegou ao fim significa que ainda nao verificou todos os digitos
 
 		selecaoEngBackspace:
-			CMP #65500, R5
-				BEQ selecaoEngLimpa
+			CMP #65512, R5
+				BEQ selecaoEngTesta
 
 			MOV #' ', (R5)
 			DEC R5
 			MOV #'_', (R5)
-			BR selecaoEngLimpa; volta a esperar por caractere
+			CLR (R0)		; limpa status do teclado
+			BR selecaoEngTesta; volta a esperar por caractere
 
 	    apertouDigito:
-			CMP #65504, R5
+			CMP #65516, R5
 				BEQ selecaoEngLimpa ; permitir somente 4 digitos
 
 			MOV 65499, (R5) ; escreve caracter do buffer no ponteiro do teclado
@@ -284,45 +483,58 @@ _S_SELECAO_ENG:
 	selecaoEngEnter:
 		DEC R5 ; decrementa devido ao cursor '_', fazendo com que o ponteiro fique no ultimo digito valido
 
-		SUB (R5), #48 ; converte pra decimal
-		MOV (R5), iEng ; salva no indice do engenheiro
-		CMP #65500, R5
-			;BEQ selecaoEngBusca ; se chegou no inicio do i/o vai pra busca
+		MOV (R5), R4
+		SUB #48, R4 ; converte pra decimal
+		MOV R4, iEng ; salva no indice do engenheiro
+		CMP #65512, R5
+			BEQ selecaoEngBusca ; se chegou no inicio do i/o vai pra busca
 
-		DEC R5
-		SUB (R5), #48
-		MOV (R5), R0 ; multiplicando
+		DEC R5 ; recua 1 posicao no ponteiro
+		MOV (R5), R4 ; copia o caracter pro R4
+		SUB #48, R4 ; converte
+		MOV R4, R0 ; multiplicando
 		MOV #10, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
 		ADD R1, iEng ; Soma com as unidades
-		MOV R1, IEng
-		CMP #65500, R5
-			;BEQ selecaoEngBusca
+		MOV R1, iEng
+		CMP #65512, R5
+			BEQ selecaoEngBusca
 
-		DEC R5
-		SUB (R5), #48
-		MOV (R5), R0 ; multiplicando
-		MOV #10, R1 ; multiplicador
+		DEC R5 ; recua 1 posicao no ponteiro
+		MOV (R5), R4 ; copia o caracter pro R4
+		SUB #48, R4 ; converte
+		MOV R4, R0 ; multiplicando
+		MOV #100, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
-		ADD R1, iEng ; Soma com as dezenas
-		MOV R1, IEng
-		CMP #65500, R5
-			;BEQ selecaoEngBusca
+		ADD R1, iEng ; Soma com as unidades
+		MOV R1, iEng
+		CMP #65512, R5
+			BEQ selecaoEngBusca
 
-		DEC R5
-		SUB (R5), #48
-		MOV (R5), R0 ; multiplicando
-		MOV #10, R1 ; multiplicador
+		DEC R5 ; recua 1 posicao no ponteiro
+		MOV (R5), R4 ; copia o caracter pro R4
+		SUB #48, R4 ; converte
+		MOV R4, R0 ; multiplicando
+		MOV #1000, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
-		ADD R1, iEng ; Soma com as centenas
-		MOV R1, IEng
+		ADD R1, iEng ; Soma com as unidades
+		MOV R1, iEng
+		CMP #65512, R5
+			BEQ selecaoEngBusca
 
-		CMP #65500, R5
-			;BEQ selecaoEngBusca
-		
-		
+		selecaoEngBusca:
+			; validar indice do engenheiro
+			MOV R0,-(R6) ; salva R0 na pilha
 
-		HLT
+			MOV iEng, R0 ; carrega indice do engenheiro digitado em R0
+			ADD R0, R0 ; converte pra palavra
+			ADD #listaLucrosEng, R0 ; soma o endereco que inicia a estrutura com os lucros calculados
+			;HLT ; DEBUG
+			JSR R7, _S_RELATORIO_ENG
+			
+			MOV (R6)+, R0 ; restaura R0
+
+			; HLT
 	
 	selecaoEngRestauraRegistradores:
 		MOV (R6)+, R5
@@ -332,12 +544,102 @@ _S_SELECAO_ENG:
 
 	selecaoEngRetorna:
 		RTS R7
-	
 
-	;	JSR R7, _S_RELATORIO_ENG ; aguarda tecla
-	;	JSR R7, _S_MSG_ERRO_ENG ; aguarda tecla
+;> Em R0 tera o endereco do lucro do engenheiro
+_S_RELATORIO_ENG:
+	JSR R7, _S_LIMPA_VISOR_ULTRA
+	MOV R0, -(R6) ; salva endereco do lucro do engenheiro na pilha
+	MOV R3, -(R6) ; salva R3 na pilha pois eh utilizada na funcao de escrever no visor com ADD
+	CLR R3
+
+	MOV #msgEng, R0 ;
+	MOV #0, R1 ;
+	JSR R7, _S_ESCREVER_NO_VISOR
+
+	MOV iEng, R0
 	
-	HLT
+	MOV #12, R5 ; move indice desejado pra R5
+	MOV iEng, R3 ; move valor que deseja imprimir
+	JSR R7, _S_PRINT_NUMEROS
+
+	MOV #msgEng, R0 ;
+	MOV #0, R1 ;
+	JSR R7, _S_ESCREVER_NO_VISOR
+
+	JSR R7, _S_PRINT_LUCRO_PREJUIZO
+
+	; AGUARDA ENTER
+	relEngSalvaRegistradores:
+		MOV R0,-(R6)	; salva R0 na pilha
+	
+	relEngSalvaInicio:
+		MOV #65498,R0	; ponteiro para controle do teclado
+	relEngSalvaLimpa:
+		CLR (R0)		; libera estado do teclado
+		CLR 65499 ; limpa buffer
+	relEngSalvaTesta:
+		TST (R0)		; testa se foi digitado algo
+		BEQ relEngSalvaTesta	; se nao foi, continua testando
+
+		CMP 65499, #13	; testa se recebeu caractere R
+			BEQ relEngRestauraRetorna 	; se sim, vai pro resumo
+
+		BR relEngSalvaTesta ; ignora se foi outra tecla alem do enter
+
+	relEngRestauraRetorna:
+		MOV (R6)+, R0 ; restaura R0 que estava sendo utilizado como estado do teclado
+		MOV (R6)+, R3 ; restaura R3 usado na funcao de escrever no visor
+		MOV (R6)+, R0 ; restaura endereco do lucro
+		JMP _S_SELECAO_ENG
+
+_S_PRINT_LUCRO_PREJUIZO:
+	MOV R0,-(R6)
+	MOV R1,-(R6)
+
+	MOV iEng, R0 ; move indice do engenheiro selecionado pra R0
+	ADD R0, R0 ; converte palavra
+	ADD #listaLucrosEng, R0 ; soma com a posicao inicial da estrutura de armazenamento
+
+	MOV (R0), R3 ; copia endereco pra R3 para printar no final
+
+	CMP #0, (R0)
+		BEQ lucroZero
+
+	MOV (R0), R1 ; se der positivo R1 eh positivo, se der negativo R1 eh negativo
+		BMI prejuizo; Se for positivo salva direto
+	
+	BR lucro
+
+	lucroZero:
+		MOV #13, R1 ;
+		MOV #msgSemLucroPrejuizo, R0
+		BR print
+		
+	lucro:
+		MOV #msgLucro, R0
+		BR printTexto
+	
+	prejuizo:
+		MOV #msgPrejuizo, R0
+		NEG R3 ; converte pra positivo
+		BR printTexto
+
+	printTexto:
+		MOV #13, R1 ;
+		JSR R7, _S_ESCREVER_NO_VISOR
+
+	printValor:
+		MOV #31, R5 ; move indice desejado pra R5
+		;MOV iEng, R3 ; move valor que deseja imprimir. R3 ja esta com o endereco do valor pois foi copiado no inicio da funcao
+		JSR R7, _S_PRINT_NUMEROS
+		
+		MOV #msgCentavos, R0
+		MOV #32, R1
+	print:
+		JSR R7, _S_ESCREVER_NO_VISOR
+
+	MOV (R6)+, R0
+
 
 _S_ZERA_REGISTRADORES:
 	CLR R0
@@ -352,7 +654,7 @@ _S_ZERA_REGISTRADORES:
 ;>
 _S_CALCULA:
 	JSR R7, _S_ZERA_REGISTRADORES
-	HLT
+	; HLT ; DEBUG
 	MOV ne, R5 ; controle do loop eh o numero de engenheiros
 	MOV endListaEng, R0 ; carrega o endereco da lista de engenheiros em R0
 	continua: 
@@ -395,61 +697,51 @@ _S_CALCULA:
 					
 					MOV #1, R5
 					SUB R5, R4 ; R4 = R4(1) - R5 feito para ajustar o indice do engenheiro pra comecar do 0
+					; HLT ; DEBUG
+					JSR R7, _S_VERIFICA_MAIOR_LUCRO ; em R3 estara o valor atualmente calculado e em R4 o indice do engenheiro
 
 					ADD R4, R4 ; transforma em palavras
 					ADD #listaLucrosEng, R4 ; soma com o endereco inicial da lista de lucros
 
-					salvaTotalSalva:
-						MOV R3, (R4) ; salva o valor na posicao calculada
-						; JSR R7, _S_VERIFICA_MAIOR_LUCRO ; em R3 estara o valor atualmente calculado
-						CLR R3 ; zera registrador para calcular o proximo eng
+					MOV R3, (R4) ; salva o valor na posicao calculada
+					CLR R3 ; zera registrador para calcular o proximo eng
 
 					MOV (R6)+, R4 ; restaura R4
 					MOV (R6)+, R5 ; restaura R5
-					;MOV R3, (R2)
 					BR continua
 
 ;> R3 = valor a ser verificado
+;> R4 = indice do engenheiro
 ;> Se R3 > maiorLucro
 ;>     (maiorLucro) = R3
 ;>
 ;> Nenhum registrador eh alterado
 ;>
-iEngMaiorLucro
 _S_VERIFICA_MAIOR_LUCRO:
 	CMP maiorLucro, R3 ; se der positivo R3 eh positivo, se der negativo R3 eh negativo
-		BLE maior ; Se for positivo salva direto
+		BLE ehMaior ; Se for positivo salva direto
 	RTS R7
 
-	maiorLucro:
+	ehMaior:
 		MOV R3, maiorLucro
+		MOV R4, iEngMaiorLucro
 		RTS R7
 
 
 _S_VERIFICA_NEGATIVO:
-	HLT ; DEBUG
+	;HLT ; DEBUG
 	CMP #32767, R3 ; se der positivo R3 eh positivo, se der negativo R3 eh negativo
-		BLE positivo ; Se for positivo salva direto
+		;BLE positivo ; Se for positivo salva direto
 
 	; negativo 
 	; se for negativo converte antes de salvar
 	NOT R3 ; R3 contem o valor
-	ADD R5, R3 ; R5 contem 1
-
-
-
-
-;> Esta funcao apenas visitara' uma estrutura auxiliar criada no inicio do programa que contem os dados ja calculados
-;> MOV #1, R0 ; indice do engenheir
-_S_BUSCA_ENGENHEIRO:
-
-	RTS R7
-	
+	ADD R5, R3 ; R5 contem 1	
 
 _S_AGUARDA_ENTER_ESC:
 	enterEscSalvaRegistradores:
 		MOV R0,-(R6)	; salva R0 na pilha
-	
+
 	enterEscInicio:
 		MOV #65498,R0	; ponteiro para controle do teclado
 	enterEscLimpa:
@@ -468,7 +760,6 @@ _S_AGUARDA_ENTER_ESC:
 
 	enterEscEsc:
 		JSR R7, _S_ENCERRAR_HENRIQUE
-		HLT
 	
 	enterEscRestauraRegistradores:
 		MOV (R6)+,R0	; restaura R0
@@ -481,6 +772,54 @@ _S_ID_ALUNO:
 	MOV #0,R1
 	JSR R7, _S_ESCREVER_NO_VISOR
 	RTS R7
+
+;> 
+;> MOV #0, R5 ; move indice desejado pra R5
+;> MOV #0, R3 ; move valor que deseja imprimir
+;> JSR R7, _S_PRINT_NUMEROS
+_S_PRINT_NUMEROS:
+	; salva registradores utilizados
+	MOV R0, -(R6)          
+	MOV R1, -(R6)          
+	MOV R2, -(R6) 
+	MOV R4, -(R6) ; R4 armazenara o quociente
+
+	ADD #65500, R5 ; CONVERTE INDICE PRA POSICAO
+
+	CLR R0 ; 16 bits mais significativos do dividendo
+	MOV R3, R1 ; 16 bits menos significativos do dividendo
+	MOV #10, R2 ; divisor
+	JSR R7, _S_DIVIDIR
+
+	ADD #48, R1 ; converter resto para ASCII
+
+	MOV R1, (R5) ; mover digito da unidade para primeira posicao
+
+	;dividir quociente anterior por 10
+	printNumQuocienteNaoZero:
+		DEC R5 ; decrementa ponteiro do visor
+		MOV R0, R4
+		BEQ printNumRestauraRetorna ; Se na primeira divisão o quociente resultante foi 0 ja retorna. isso significa que tem somente 1 digito
+		
+		MOV R0, R1
+		CLR R0
+		JSR R7, _S_DIVIDIR
+
+		ADD #48, R1 ; converter resto para ASCII
+
+		MOV R1, (R5) ; move digito calculado(dezena, centena, milhar) pra posicao correspondente no visor
+
+		MOV R0, R4  
+		BEQ printNumRestauraRetorna
+		
+		JMP printNumQuocienteNaoZero
+
+	printNumRestauraRetorna:
+		MOV (R6)+,R4
+		MOV (R6)+,R2          
+		MOV (R6)+,R1          
+		MOV (R6)+,R0          
+		RTS R7
 
 _S_ENCERRAR_HENRIQUE:
 	JSR R7, _S_ZERA_REGISTRADORES
