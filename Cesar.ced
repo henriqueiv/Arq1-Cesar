@@ -1,69 +1,3 @@
-;=====================================================
-; Caso de teste #1
-;=====================================================
-org 32768
-ne:	dw 11 ; numero de engenheiros. 32768
-
-;pe: dw engenheiros ; 32770
-endListaEng: dw engenheiros
-
-nc: dw 10 ; n˙mero de cidades ; 32772
-;pl: dw lucros ; 32774
-endListaLucro: dw lucros
-
-engenheiros: 
-	dw eng0  ; 32776
-	dw eng1  ; 32778
-	dw eng2  ; 32780
-	dw eng3  ; 32782
-	dw eng4    ; 32784
-	dw eng5    ; 32786
-	dw eng6    ; 32790
-	dw eng7    ; 32792
-	dw eng8    ; 32794
-	dw eng9    ; 32796
-	dw eng10   ; 32798
-
-lucros: daw 500,-100,350,-50,1200,950,800,-200,100,1000 ; 32794
-32796, 32798, 32800, 32802, 32804, 32806, 32808 
-
-eng7:  daw 3,1,3,7 ; 32810
-eng6:  daw 1,4 ; 32812
-eng5:  daw 0 ; 32814
-eng8:  daw 7,0,2,4,5,6,8,9 ; 32816
-eng0:  daw 4,0,1,2,3 ; 32818
-eng1:  daw 5,4,5,6,7,8 ; 32820
-eng2:  daw 3,9,5,1 ; 32822
-eng3:  daw 5,0,2,4,6,8 ; 32824
-eng4:  daw 10,0,1,2,3,4,5,6,7,8,9 ; 32826
-eng9:  daw 2,1,8 ; 32828
-eng10: daw 3,1,2,7 ; 32830
-
-; resultados
-;   eng0: 700
-;   eng1: 2850
-;   eng2: 1850
-;   eng3: 2950
-;   eng4: 4550
-;   eng5: 0
-;   eng6: 1200
-;   eng7: -350
-;   eng8: 4900
-;   eng9: 0
-;   eng10: 50
-;
-
-org 65500
-	dab 'Teste #1 carregado'
-;=====================================================
-
-
-;> Inicializacao do apontador da pilha
-;> para que a pilha fique acima da area
-;> de memoria mapeada para entrada e saida
-;> ESTAS DUAS INSTRUCOES DEVEM SER MANTIDAS AQUI !
-;=====================================================
-
 ORG 20000 ; area de variaveis
 	msgAluno: DAB 'Henrique Valcanaia - 240501', 0 	   ; 0 para encerrar a string
 	msgMenu: DAB 'Selecione uma acao: [r][e][g][f]', 0 ; 0 para encerrar a string
@@ -78,6 +12,7 @@ ORG 20000 ; area de variaveis
 	msgLucro: DAB ', lucro R$ ', 0
 	msgPrejuizo: DAB ', prejuizo R$ ', 0
 	msgCentavos: DAB ',00',0
+	msgErroIndiceEng1: DAB 'Indice invalido: ',0
 	
 
 ORG 23000
@@ -90,11 +25,11 @@ ORG 25000
 ORG 30000 ; valor definido para facilitar debug
 	listaLucrosEng: DAW 99 ; esta lista armazenara os dados pre calculados dos engenheiros mantendo a mesma ordenacao da lista principal
 
-;ORG 32768
-;	ne: DW 99;
-;	endListaEng: DW 0;
-;	nc: DW 999;
-;	endListaLucro: DW 0;
+ORG 32768
+	ne: DW 99;
+	endListaEng: DW 0;
+	nc: DW 999;
+	endListaLucro: DW 0;
 
 ORG 0
 	MOV #32767, R6 ; aponta SP para 32767 conforme especificacao do trabalho
@@ -118,17 +53,25 @@ _S_RESUMO:
 	MOV #0, R1
 	JSR R7, _S_ESCREVER_NO_VISOR ; Engenheiros:
 
-	MOV #14, R5 ; indice do dispostivo de i/o
-	MOV ne, R1 ; valor a ser exibido no visor
-	JSR R7, _S_EXIBE_ENG
+	;MOV #14, R5 ; indice do dispostivo de i/o
+	;MOV ne, R1 ; valor a ser exibido no visor
+	;JSR R7, _S_EXIBE_ENG
+
+	MOV #15, R5 ; move indice desejado pra R5
+	MOV ne, R3 ; move valor que deseja imprimir
+	JSR R7, _S_PRINT_NUMEROS
 
 	MOV #msgResumo2, R0
 	MOV #19, R1
 	JSR R7, _S_ESCREVER_NO_VISOR ; Cidades:
 
-	MOV #28, R5 ; indice do dispostivo de i/o
-	MOV nc, R1 ; valor a ser exibido no visor
-	JSR R7, _S_EXIBE_CIDADE
+	;MOV #28, R5 ; indice do dispostivo de i/o
+	;MOV nc, R1 ; valor a ser exibido no visor
+	;JSR R7, _S_EXIBE_CIDADE
+
+	MOV #29, R5 ; move indice desejado pra R5
+	MOV nc, R3 ; move valor que deseja imprimir
+	JSR R7, _S_PRINT_NUMEROS
 
 	resumoSalvaRegistradores:
 		MOV R0,-(R6)	; salva R0 na pilha
@@ -382,7 +325,6 @@ _S_AGUARDA_OPCAO_MENU:
 		RTS R7
 
 _S_MENU_REL_GERAL:
-	; HLT ; debug
 	JSR R7, _S_LIMPA_VISOR_ULTRA
 
 	MOV #msgMaiorLucro, R0 
@@ -481,21 +423,33 @@ _S_SELECAO_ENG:
 			BR selecaoEngLimpa; volta a esperar por caractere
 
 	selecaoEngEnter:
+		CMP #65512, R5  ; Se o ponteiro do teclado esta no lugar inicial
+			BEQ jumpMenu
+		BR naoJumpMenu
+		
+		jumpMenu: 
+			JMP _S_MENU ; significa que nao foi digitado nada e volta pro menu
+		
+		naoJumpMenu:
 		DEC R5 ; decrementa devido ao cursor '_', fazendo com que o ponteiro fique no ultimo digito valido
 
 		MOV (R5), R4
 		SUB #48, R4 ; converte pra decimal
 		MOV R4, iEng ; salva no indice do engenheiro
 		CMP #65512, R5
-			BEQ selecaoEngBusca ; se chegou no inicio do i/o vai pra busca
+			BEQ jump ; se chegou no inicio do i/o vai pra busca
+			BR continuaDigitos
+		jump:
+			JMP selecaoEngBusca
 
+		continuaDigitos:
 		DEC R5 ; recua 1 posicao no ponteiro
 		MOV (R5), R4 ; copia o caracter pro R4
 		SUB #48, R4 ; converte
 		MOV R4, R0 ; multiplicando
 		MOV #10, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
-		ADD R1, iEng ; Soma com as unidades
+		ADD iEng, R1 ; Soma com as unidades
 		MOV R1, iEng
 		CMP #65512, R5
 			BEQ selecaoEngBusca
@@ -506,7 +460,7 @@ _S_SELECAO_ENG:
 		MOV R4, R0 ; multiplicando
 		MOV #100, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
-		ADD R1, iEng ; Soma com as unidades
+		ADD iEng, R1 ; Soma com as unidades
 		MOV R1, iEng
 		CMP #65512, R5
 			BEQ selecaoEngBusca
@@ -517,24 +471,49 @@ _S_SELECAO_ENG:
 		MOV R4, R0 ; multiplicando
 		MOV #1000, R1 ; multiplicador
 		JSR R7, _S_MULTIPLICAR ; No R0 ficara a msword e R1 ficara a lsword
-		ADD R1, iEng ; Soma com as unidades
+		ADD iEng, R1 ; Soma com as unidades
 		MOV R1, iEng
 		CMP #65512, R5
 			BEQ selecaoEngBusca
 
+		msgErro:
+			MOV #msgErroIndiceEng1, R0
+			MOV #0, R1
+			JSR R7, _S_ESCREVER_NO_VISOR
+
+			MOV #18, R5
+			MOV iEng, R3
+			JSR R7, _S_PRINT_NUMEROS
+			
+			MOV #65498, R0
+			CLR (R0)
+			CLR 65499
+			msgErroTesta:
+				TST (R0) ; testa se foi digitado algo
+				BEQ msgErroTesta	; se nao foi, continua testando
+
+				CMP 65499, #13	; testa se foi pressionado enter
+			    	BEQ msgErroEnter ; se sim, volta pra selecao
+			    BR msgErroTesta
+			    
+			    msgErroEnter:
+			    	JMP _S_SELECAO_ENG
+
 		selecaoEngBusca:
-			; validar indice do engenheiro
+			validaIndice:
+				MOV iEng, R1
+				CMP ne, R1
+					BMI msgErro
+			
+			; imprimir relatorio do engenheiro
 			MOV R0,-(R6) ; salva R0 na pilha
 
 			MOV iEng, R0 ; carrega indice do engenheiro digitado em R0
 			ADD R0, R0 ; converte pra palavra
 			ADD #listaLucrosEng, R0 ; soma o endereco que inicia a estrutura com os lucros calculados
-			;HLT ; DEBUG
 			JSR R7, _S_RELATORIO_ENG
 			
 			MOV (R6)+, R0 ; restaura R0
-
-			; HLT
 	
 	selecaoEngRestauraRegistradores:
 		MOV (R6)+, R5
@@ -654,7 +633,6 @@ _S_ZERA_REGISTRADORES:
 ;>
 _S_CALCULA:
 	JSR R7, _S_ZERA_REGISTRADORES
-	; HLT ; DEBUG
 	MOV ne, R5 ; controle do loop eh o numero de engenheiros
 	MOV endListaEng, R0 ; carrega o endereco da lista de engenheiros em R0
 	continua: 
@@ -680,8 +658,6 @@ _S_CALCULA:
 
 				ADD (R2), R3 ; soma endereco da visita em R2 com R3
 
-				;HLT ; DEBUG
-
 				DEC R4 ; decrementa contador do numero de visitas
 				CMP #0, R4
 					BEQ salvaTotal ; se chegou a zero eh pq somou todo mundo ja, pode salvar
@@ -697,7 +673,6 @@ _S_CALCULA:
 					
 					MOV #1, R5
 					SUB R5, R4 ; R4 = R4(1) - R5 feito para ajustar o indice do engenheiro pra comecar do 0
-					; HLT ; DEBUG
 					JSR R7, _S_VERIFICA_MAIOR_LUCRO ; em R3 estara o valor atualmente calculado e em R4 o indice do engenheiro
 
 					ADD R4, R4 ; transforma em palavras
@@ -726,17 +701,6 @@ _S_VERIFICA_MAIOR_LUCRO:
 		MOV R3, maiorLucro
 		MOV R4, iEngMaiorLucro
 		RTS R7
-
-
-_S_VERIFICA_NEGATIVO:
-	;HLT ; DEBUG
-	CMP #32767, R3 ; se der positivo R3 eh positivo, se der negativo R3 eh negativo
-		;BLE positivo ; Se for positivo salva direto
-
-	; negativo 
-	; se for negativo converte antes de salvar
-	NOT R3 ; R3 contem o valor
-	ADD R5, R3 ; R5 contem 1	
 
 _S_AGUARDA_ENTER_ESC:
 	enterEscSalvaRegistradores:
@@ -830,35 +794,6 @@ _S_ENCERRAR_HENRIQUE:
 	HLT
 
 ;=====================================================
-
-
-MOV #10,R2		; divisor no R2
-CLR R0			; R0 = msbits do dividendo
-
-;primeira divisao por 10: resto = digito da unidade
-JSR R7,_S_DIVIDIR	
-ADD #48,R1		; R1 = resto (digito da unidade) - soma com '48' direto no LED
-MOV R1,(R4)  	 	; Mostra no visor
-DEC R4
-MOV R0, R1		; R0 = quociente (digitos da centena e dezena
-CMP #0,R1        
-BEQ fim_conversao
-CLR R0			; [R0][R1] e' o novo dividendo (quociente da divisao anterior)
-
-;segunda divisao por 10: resto = digito da dezena e quociente = digito da centena
-imprime_proximo:
-	CMP #0,R1
-	BEQ fim_conversao
-	JSR R7,_S_DIVIDIR
-	add #48,R1		; R1 = resto (digito da dezena) - soma com '48' direto no LED
-	MOV R1,(R4)
-	DEC R4
-	MOV R0,R1
-	CLR R0
-	BR imprime_proximo
-fim_conversao:
-	RTS R7
-
 
 ;>---------------------------------------------------<
 ;> AS SUBROTINAS DEVEM INICIAR SOMENTE APOS A ULTIMA <
@@ -1121,8 +1056,6 @@ __FIM_VISOR:
 ;>   V = 1 indica que n?o ? zero, ou seja: se for desprezada ocorre estouro
 ;>
 _S_MULTIPLICAR:
-          MOV R0,-(R6)          ; salva R0 na pilha
-          MOV R1,-(R6)          ; salva R1 na pilha
           MOV R2,-(R6)          ; salva R2 na pilha
           MOV R3,-(R6)          ; salva R3 na pilha
           MOV #16,R2            ; inicializa contador
