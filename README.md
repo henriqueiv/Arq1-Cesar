@@ -5,4 +5,4 @@ Este repositório contém o código do segundo trabalho de Arquitetura de comput
 
 A especificação do trabalho pode ser encontrada no arquivo "TrabalhoCesar.2014.revD.pdf"
 
-IMPORTANTE: O trabalho ainda contém alguns bugs
+Nota final: 105/100 (100 obtido dos casos de teste e 5 do bonus de cursor visível)
